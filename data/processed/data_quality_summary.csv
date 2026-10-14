@@ -1,14 +1,7 @@
-month,source_file,schema,benin_feeders_found,benin_feeders_expected,missing_feeder_names,day_values_total,day_values_missing_or_nonnumeric,pct_missing
-2025-04,bedc_april_2025.csv,compliance,16,23,"EKEHUAN CAMPUS, GRA 11, IHAMA, SWITCHING STATION, UGBOR, UJEMEN-COMMERCIAL, UPPER LAWANI",112,0,0.0
-2025-05,BEDC_may_2025.csv,compliance,16,23,"EKEHUAN CAMPUS, GRA 11, IHAMA, SWITCHING STATION, UGBOR, UJEMEN-COMMERCIAL, UPPER LAWANI",496,0,0.0
-2025-06,bedc_june_2025.csv,compliance,16,23,"EKEHUAN CAMPUS, GRA 11, IHAMA, SWITCHING STATION, UGBOR, UJEMEN-COMMERCIAL, UPPER LAWANI",480,0,0.0
-2025-07,bedc_july_2025.csv,compliance,16,23,"EKEHUAN CAMPUS, GRA 11, IHAMA, SWITCHING STATION, UGBOR, UJEMEN-COMMERCIAL, UPPER LAWANI",496,16,3.2
-2025-08,BEDC_August__2025.csv,plain,18,23,"GRA 11, IHAMA, UGBOR, UJEMEN-COMMERCIAL, UPPER LAWANI",540,36,6.7
-2025-09,bedc_september_2025.csv,plain,18,23,"GRA 11, IHAMA, UGBOR, UJEMEN-COMMERCIAL, UPPER LAWANI",558,0,0.0
-2025-10,BEDC__1__October__2025.csv,plain,22,23,GRA 11,682,0,0.0
-2025-11,BEDC_2NOVEMBER.csv,plain,23,23,,713,23,3.2
-2025-12,BEDC_3December.csv,plain,23,23,,713,0,0.0
-2026-01,BEDC_4January.csv,plain,23,23,,713,0,0.0
-2026-02,BEDC_5February.csv,plain,23,23,,644,0,0.0
-2026-03,BEDC_6March.csv,plain,23,23,,713,0,0.0
-2026-04,BEDC_7April.csv,plain,23,23,,713,23,3.2
+month,source_file,feeders_found,feeders_expected,missing_feeder_names,daily_values_recorded,missing_or_nonnumeric,pct_missing
+2025-11,BEDC_2NOVEMBER.csv,22,22,,660,0,0.0
+2025-12,BEDC_3December.csv,22,22,,682,0,0.0
+2026-01,BEDC_4January.csv,22,22,,682,0,0.0
+2026-02,BEDC_5February.csv,22,22,,616,0,0.0
+2026-03,BEDC_6March.csv,22,22,,682,0,0.0
+2026-04,BEDC_7April.csv,22,22,,660,0,0.0
