@@ -1,7 +1,11 @@
 """
-Section 4: Reliability Assessment
-Computes per-feeder reliability metrics from the CONSISTENT Nov 2025 - Apr 2026 panel,
-then builds a composite Reliability Index (RI) using entropy weighting.
+Step 2: Reliability assessment (paper Sections 2.3 and 3.1 to 3.2)
+
+Computes per-feeder reliability metrics from the November 2025 to April 2026
+panel, builds the composite Reliability Index (RI) using entropy weighting, and
+runs the two robustness checks described in Section 2.3.3:
+  1. absolute daily minimum versus fifth percentile as the worst-case criterion;
+  2. entropy weighting versus equal weighting (Spearman rank correlation).
 """
 import pandas as pd
 import numpy as np
@@ -11,13 +15,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(SCRIPT_DIR, "..", "data", "processed") + os.sep
 os.makedirs(DATA_DIR, exist_ok=True)
 
-panel = pd.read_csv(DATA_DIR + 'benin_feeder_panel_CONSISTENT_nov2025_apr2026.csv')
+panel = pd.read_csv(DATA_DIR + 'benin_feeder_panel_nov2025_apr2026.csv')
 
 # Use the original (non-normalized) Feeder name for display, Feeder_norm as key
 panel['hours'] = pd.to_numeric(panel['hours'], errors='coerce')
 
-THRESHOLD_PRIMARY = 20.0  # NERC Service-Based Tariff Order (effective 3 April 2024): Band A minimum guaranteed supply, 20 hours/day
-THRESHOLD_SECONDARY = 18.0  # NERC special compensation tier (Feb-Mar 2026 directive): feeders below 18 hrs/day flagged as severely underperforming while retaining Band A status
+THRESHOLD_PRIMARY = 20.0  # NERC Order NERC/2025/046: Band A minimum supply, 20 hours/day
+THRESHOLD_SECONDARY = 18.0  # NERC Order NERC/2025/046: lower threshold used in determining compensation for Band A feeders
 
 # ---------------------------------------------------------------------------
 # 4.1 Per-feeder, per-month metrics, then aggregate to full-period metrics
@@ -47,11 +51,11 @@ monthly_means.to_csv(DATA_DIR + 'reliability_monthly_means.csv')
 
 # ---------------------------------------------------------------------------
 # 4.2 Composite Reliability Index (RI) via entropy weighting
-# Criteria used (all derived from data in hand):
-#   - mean_hours       (higher is better)
-#   - cv               (lower is better -> invert)
-#   - min_hours        (higher is better)
-#   - pct_days_below_threshold (lower is better -> invert)
+# Criteria (all higher-is-better after transformation):
+#   - mean_hours         mean daily supply hours
+#   - consistency        1 / (1 + coefficient of variation)
+#   - p05_hours          fifth percentile of daily supply hours (worst-case exposure)
+#   - reliability_days   percentage of days meeting the 20-hour Band A standard
 # ---------------------------------------------------------------------------
 idx = feeder_stats.set_index('Feeder_norm')
 criteria = pd.DataFrame({
@@ -78,6 +82,24 @@ def entropy_weights(norm_df):
 weights = entropy_weights(norm)
 print("Entropy-derived weights:")
 print(weights)
+
+# ---------------------------------------------------------------------------
+# Robustness check 1 (Section 2.3.3): worst-case criterion.
+# Repeat the entropy weighting with the absolute daily minimum in place of the
+# fifth percentile. Isolated single-day total outages inflate the spread of the
+# minimum, so it takes a disproportionate share of the entropy weight.
+# ---------------------------------------------------------------------------
+criteria_min = criteria.drop(columns='p05_hours').assign(min_hours=idx['min_hours'])
+criteria_min = criteria_min[['mean_hours', 'consistency', 'min_hours', 'reliability_days']]
+norm_min = (criteria_min - criteria_min.min()) / (criteria_min.max() - criteria_min.min())
+weights_min = entropy_weights(norm_min)
+pd.DataFrame({'weight_with_p05': weights.rename({'p05_hours': 'worst_case'}),
+              'weight_with_min': weights_min.rename({'min_hours': 'worst_case'})}
+             ).to_csv(DATA_DIR + 'reliability_index_worstcase_check.csv')
+print()
+print("ROBUSTNESS CHECK 1: worst-case criterion")
+print(f"  Weight of absolute minimum when used: {weights_min['min_hours']:.3f}")
+print(f"  Weight of fifth percentile when used: {weights['p05_hours']:.3f}")
 
 RI = (norm * weights).sum(axis=1)
 RI_normalized = 100 * (RI - RI.min()) / (RI.max() - RI.min())

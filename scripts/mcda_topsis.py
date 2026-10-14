@@ -1,20 +1,20 @@
 """
-Section 5: MCDA-Based Candidate Site Screening
-Uses the Reliability Index (Section 4) plus two additional criteria derivable
-from the data in hand, then ranks feeders with TOPSIS.
+Step 3: Multi-criteria candidate site screening (paper Sections 2.4 and 3.3 to 3.4)
 
-Criteria:
-  C1. Reliability Index (RI_0_100)              - from Section 4, higher is better
-  C2. Commercial land-use proxy                  - 1 if feeder name indicates a
-                                                     commercial/mixed-use area, 0 otherwise;
-                                                     higher plausible EV traffic/demand
-  C3. Reliability trend (Nov 2025 - Apr 2026)     - slope of monthly mean supply hours;
-                                                     positive = improving, higher is better
+Combines the Reliability Index with two further criteria derived from the same
+data and ranks the feeders with TOPSIS, then repeats the ranking under four
+alternative weighting schemes (weight sensitivity analysis).
 
-IMPORTANT: the criteria weights below are ASSUMED for illustration, not derived
-from an expert panel or AHP pairwise survey. This must be stated explicitly in
-the paper. If a real AHP pairwise comparison (from utility engineers, planners,
-or literature-derived weights) becomes available, replace WEIGHTS_ASSUMED below.
+Criteria (all benefit criteria, higher is better):
+  C1. Reliability Index (RI_0_100), from Step 2
+  C2. Commercial land-use indicator: 1 if the BEDC feeder name designates it
+      commercial, 0 otherwise
+  C3. Reliability trend: slope of a least-squares line fitted to the six monthly
+      mean supply hours (hours per day per month); positive = improving
+
+The criteria weights (0.60, 0.25, 0.15) are assigned by the authors, not derived
+from expert judgement; their basis is given in Section 2.4.2 of the paper and
+their influence is tested by the weight sensitivity analysis.
 """
 import pandas as pd
 import numpy as np
@@ -28,9 +28,9 @@ ri = pd.read_csv(DATA_DIR + 'reliability_index_results.csv', index_col=0)
 monthly = pd.read_csv(DATA_DIR + 'reliability_monthly_means.csv', index_col=0)
 
 # ---------------------------------------------------------------------------
-# C2: Commercial land-use proxy (derived from feeder naming convention)
+# C2: Commercial land-use indicator (from the BEDC feeder name)
 # ---------------------------------------------------------------------------
-ri['commercial_proxy'] = ri.index.to_series().apply(
+ri['commercial_indicator'] = ri.index.to_series().apply(
     lambda x: 1 if 'COMMERCIAL' in x else 0
 )
 
@@ -54,19 +54,18 @@ ri['trend_slope'] = monthly.apply(slope, axis=1)
 # ---------------------------------------------------------------------------
 decision = pd.DataFrame({
     'RI': ri['RI_0_100'],
-    'commercial_proxy': ri['commercial_proxy'],
+    'commercial_indicator': ri['commercial_indicator'],
     'trend_slope': ri['trend_slope'],
 })
 
 # Normalize (vector normalization, standard for TOPSIS)
 norm_matrix = decision / np.sqrt((decision ** 2).sum())
 
-# ASSUMED weights - stated explicitly, to be replaced with AHP/expert-derived
-# weights if available. Rationale for the assumed split:
+# Assumed weights (Section 2.4.2). Basis:
 #   RI weighted highest (0.6) since it is the paper's primary, data-grounded criterion
-#   commercial_proxy given moderate weight (0.25) as a plausible but unvalidated demand proxy
+#   commercial_indicator given moderate weight (0.25) as a plausible but unvalidated indicator of demand
 #   trend_slope given lowest weight (0.15) since 6 months is a short window for trend inference
-WEIGHTS_ASSUMED = {'RI': 0.60, 'commercial_proxy': 0.25, 'trend_slope': 0.15}
+WEIGHTS_ASSUMED = {'RI': 0.60, 'commercial_indicator': 0.25, 'trend_slope': 0.15}
 w = pd.Series(WEIGHTS_ASSUMED)
 
 weighted = norm_matrix * w
@@ -87,14 +86,14 @@ result['final_rank'] = range(1, len(result) + 1)
 
 result.to_csv(DATA_DIR + 'mcda_topsis_results.csv')
 
-print("ASSUMED WEIGHTS (stated as an assumption, not AHP-derived):")
+print("ASSUMED CRITERIA WEIGHTS (Section 2.4.2):")
 print(w)
 print()
 print("MCDA / TOPSIS RANKING:")
 print(result.round(3).to_string())
 
 # ---------------------------------------------------------------------------
-# 5.x Weight-sensitivity check: test alternative weighting schemes
+# Weight sensitivity analysis (Section 2.4.4): test alternative weighting schemes
 # ---------------------------------------------------------------------------
 def run_topsis(weights_dict):
     w_ = pd.Series(weights_dict)
@@ -106,11 +105,11 @@ def run_topsis(weights_dict):
     return dw / (db + dw)
 
 schemes = {
-    'base_RI60_comm25_trend15': {'RI': 0.60, 'commercial_proxy': 0.25, 'trend_slope': 0.15},
-    'equal_thirds': {'RI': 1/3, 'commercial_proxy': 1/3, 'trend_slope': 1/3},
-    'RI_dominant_80': {'RI': 0.80, 'commercial_proxy': 0.10, 'trend_slope': 0.10},
-    'commercial_dominant': {'RI': 0.30, 'commercial_proxy': 0.55, 'trend_slope': 0.15},
-    'trend_dominant': {'RI': 0.30, 'commercial_proxy': 0.15, 'trend_slope': 0.55},
+    'base_RI60_comm25_trend15': {'RI': 0.60, 'commercial_indicator': 0.25, 'trend_slope': 0.15},
+    'equal_thirds': {'RI': 1/3, 'commercial_indicator': 1/3, 'trend_slope': 1/3},
+    'RI_dominant_80': {'RI': 0.80, 'commercial_indicator': 0.10, 'trend_slope': 0.10},
+    'commercial_dominant': {'RI': 0.30, 'commercial_indicator': 0.55, 'trend_slope': 0.15},
+    'trend_dominant': {'RI': 0.30, 'commercial_indicator': 0.15, 'trend_slope': 0.55},
 }
 
 closeness_table = pd.DataFrame({name: run_topsis(sw) for name, sw in schemes.items()})
